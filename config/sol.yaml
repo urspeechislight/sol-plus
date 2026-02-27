@@ -1,0 +1,244 @@
+# sol-next configuration
+# All registries and thresholds in one file.
+# Validation at startup catches every broken cross-reference.
+
+# ─────────────────────────────────────────────────────────────────────────────
+# PATTERNS
+# Surface-level text detectors. Phase 2 runs these against span text.
+# Each match becomes a Pattern object on the span.
+# ─────────────────────────────────────────────────────────────────────────────
+patterns:
+  - id: ATTRIBUTION
+    description: Hadith transmission verbs and markers (حدثنا, أخبرنا, عن, روى)
+    regex: "\\bو?(?:حدثنا|حدثني|ثنا|أخبرنا|أخبرني|روى|روينا|أنبأنا|نبأنا|سمعت|سمعنا|بإسناده)\\b|وعن\\b|\\bعن\\b"
+    is_boundary: true
+
+  - id: SPEECH_VERB_GENERIC
+    description: Generic speech verb (قال, يقول, قيل)
+    regex: "قال|قالوا|يقول|قيل|ذكر|قلت"
+
+  - id: MATN_BOUNDARY_HINT
+    description: Prophet attribution phrases that mark matn start
+    regex: "(?:قال|عن|أن|كان|أمر|نهى|سئل|رأيت) (?:رسول الله|النبي)|مرفوعا|رفعه|يرفعه|يبلغ به"
+
+  - id: QURAN_REF
+    description: Quranic quotation markers
+    regex: "قال الله|قال تعالى|قوله تعالى|قوله عز وجل|﴿|\\bسورة"
+
+  - id: GENEALOGY_CHAIN
+    description: Genealogy/isnad chain marker (ابن, بن)
+    regex: "\\bبن\\b|\\bابن\\b|\\bبنت\\b"
+
+  - id: DEATH_MARKER
+    description: Death date marker (توفي, مات, وفاته)
+    regex: "توفي|توفيت|مات|ماتت|وفاته|وفاتها|المتوفى|المتوفاة"
+
+  - id: BIRTH_MARKER
+    description: Birth date marker (ولد, مولده)
+    regex: "ولد|ولدت|مولده|مولدها|نشأ"
+
+  - id: PERSON_REF
+    description: Person reference markers (الشيخ, الإمام, العالم)
+    regex: "الشيخ|الإمام|العالم|الحافظ|المحدث|الفقيه|القاضي|الأمير|الحاكم"
+
+  - id: FIQH_RULING
+    description: Legal ruling markers (يجب, يحرم, يستحب)
+    regex: "يجب|يحرم|يكره|يستحب|يباح|فرض|واجب|حرام|مكروه|مندوب|مباح"
+
+  - id: BASMALA
+    description: Basmala (بسم الله الرحمن الرحيم)
+    regex: "بسم الله الرحمن الرحيم"
+    is_boundary: true
+
+  - id: HEADING_MARKER
+    description: Structural heading keywords (باب, فصل, كتاب), with optional decorative wrappers
+    regex: "^[\\s(*0-9٠-٩]*(?:كتاب|باب|فصل|فصول|مسألة|مسائل|القول في|الكلام في)(?=[\\s*()\\n]|$)"
+    is_boundary: true
+    heading_stop_patterns: ["الآيات"]
+    heading_disqualifiers:
+      - "\\s+فف"
+      - "\\s+و[إأ]ن"
+      - "\\s+(?!ال)\\S{2,}(?:هم|هما|هن|ها)\\b"
+    hierarchy_levels:
+      kitab: ["كتاب"]
+      bab: ["باب", "مسألة", "مسائل", "القول في", "الكلام في"]
+      fasl: ["فصل", "فصول"]
+
+  - id: AUTHOR_COMMENTARY
+    description: Author commentary markers (بيان, أقول)
+    regex: "\\bبيان\\s*:|\\bأقول\\b|\\bتفسير\\s*:"
+    is_boundary: true
+    start_threshold: 20
+
+  - id: NUMBERED_ENTRY
+    description: Numbered list entries (1., 1 -, ١., etc.)
+    regex: "^\\s*[١٢٣٤٥٦٧٨٩٠0-9]+\\s*[.\\)\\-]"
+    is_boundary: true
+
+
+# ─────────────────────────────────────────────────────────────────────────────
+# BEHAVIORS
+# Routing table: pattern combinations → behavior labels.
+# Phase 2 consults this after detecting patterns on a span.
+#
+# Rules:
+#   requires:     ALL listed patterns must be present
+#   any_of:       AT LEAST ONE listed pattern must be present
+#   none_of:      behavior does NOT fire if ANY of these patterns are present
+#   genre_gate:   behavior only activates for these book_type values
+#   priority:     higher number wins when multiple behaviors match (default: 0)
+# ─────────────────────────────────────────────────────────────────────────────
+behaviors:
+  - id: HADITH_TRANSMISSION
+    description: >
+      A complete hadith unit — contains both the isnad (narrator chain, triggered by
+      ATTRIBUTION) and the matn (prophetic text, triggered by MATN_BOUNDARY_HINT).
+      Phase 2 labels the whole span as one transmission unit. Phase 3 is responsible
+      for splitting it into ISNAD_UNIT + MATN_UNIT via the sanad_matn_split atomicizer.
+    any_of: [ATTRIBUTION, MATN_BOUNDARY_HINT]
+    priority: 80
+
+  - id: QURAN_VERSE
+    description: >
+      Standalone Quranic text or verse reference. Does not fire when ATTRIBUTION
+      is present — a span beginning with a hadith chain that cites a Quran verse
+      as dalil is a HADITH_TRANSMISSION, not a QURAN_VERSE.
+    requires: [QURAN_REF]
+    none_of: [ATTRIBUTION]
+    priority: 90
+
+  - id: BIOGRAPHY
+    description: Biographical entry about a scholar or person
+    requires: [PERSON_REF]
+    any_of: [DEATH_MARKER, BIRTH_MARKER, GENEALOGY_CHAIN]
+    priority: 70
+
+  - id: AUTHOR_COMMENTARY
+    description: Author commentary or explanation (بيان, أقول)
+    requires: [AUTHOR_COMMENTARY]
+    priority: 85
+
+  - id: FIQH_RULING
+    description: Legal ruling or juristic opinion
+    requires: [FIQH_RULING]
+    priority: 75
+
+  - id: SECTION_HEADING
+    description: Structural heading (kitab, bab, fasl)
+    requires: [HEADING_MARKER]
+    priority: 95
+
+  - id: NUMBERED_ENTRY
+    description: Numbered list entry
+    requires: [NUMBERED_ENTRY]
+    priority: 60
+
+  - id: GENERAL_PROSE
+    description: Default behavior for content with no specific pattern match
+    requires: []
+    priority: 0
+
+
+
+# ─────────────────────────────────────────────────────────────────────────────
+# ATOMICIZERS
+# How to split each behavior's spans into atomic units.
+# Phase 3 looks up the behavior here.
+# ─────────────────────────────────────────────────────────────────────────────
+atomicizers:
+  HADITH_TRANSMISSION:
+    strategy: sanad_matn_split
+    unit_types:
+      isnad: ISNAD_UNIT
+      matn: MATN_UNIT
+    fallback_unit_type: HADITH_UNIT
+
+  AUTHOR_COMMENTARY:
+    strategy: whole_span
+    unit_type: COMMENTARY_UNIT
+
+  QURAN_VERSE:
+    strategy: whole_span
+    unit_type: QURAN_UNIT
+
+  BIOGRAPHY:
+    strategy: whole_span
+    unit_type: BIOGRAPHY_UNIT
+
+  FIQH_RULING:
+    strategy: whole_span
+    unit_type: FIQH_UNIT
+
+  SECTION_HEADING:
+    strategy: whole_span
+    unit_type: HEADING_UNIT
+
+  NUMBERED_ENTRY:
+    strategy: whole_span
+    unit_type: ENTRY_UNIT
+
+  GENERAL_PROSE:
+    strategy: whole_span
+    unit_type: PROSE_UNIT
+
+
+
+# ─────────────────────────────────────────────────────────────────────────────
+# EXTRACTORS
+# Which extractors to run per behavior.
+# Phase 3 looks up behavior here to find which extractors to invoke.
+# (Extractor implementations live in src/extractors/ — not yet built)
+# ─────────────────────────────────────────────────────────────────────────────
+extractors:
+  HADITH_TRANSMISSION:
+    - narrator_extractor
+  AUTHOR_COMMENTARY: []
+  QURAN_VERSE: []
+  BIOGRAPHY:
+    - person_extractor
+    - date_extractor
+  FIQH_RULING: []
+  SECTION_HEADING: []
+  NUMBERED_ENTRY: []
+  GENERAL_PROSE: []
+
+
+# ─────────────────────────────────────────────────────────────────────────────
+# GRAPH
+# Edge types produced by Phase 5.
+# ─────────────────────────────────────────────────────────────────────────────
+graph:
+  structural:
+    - CONTAINS
+    - NEXT
+    - HAS_SECTION
+    - HAS_FOOTNOTE
+
+  reference:
+    - CITATION_MENTION
+    - CITES
+    - MENTIONS_PERSON
+
+  hadith:
+    - HAS_SANAD
+    - HAS_MATN
+    - NARRATES_FROM
+
+  alignment:
+    - ALIGNS_WITH
+
+
+# ─────────────────────────────────────────────────────────────────────────────
+# THRESHOLDS
+# All numeric thresholds in one place.
+# Python code reads config.thresholds["key"] — never hard-codes numbers.
+# ─────────────────────────────────────────────────────────────────────────────
+thresholds:
+  citation_confidence_min: 0.85
+  alignment_confidence_min: 0.90
+  semantic_similarity_min: 0.75
+  dominance_gap_min: 0.15
+  frontmatter_page_max: 5
+  content_page_min_chars: 100
+  content_min_line_length: 55
+  min_span_chars: 20

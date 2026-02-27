@@ -1,0 +1,37 @@
+[project]
+name = "sol-next"
+version = "0.1.0"
+description = "SOL pipeline — simplified"
+requires-python = ">=3.12"
+
+dependencies = [
+    "pyyaml>=6.0",
+    "psycopg[async]>=3.1",
+    "neo4j>=5.0",
+    "qdrant-client>=1.7",
+    "redis>=5.0",
+    "anthropic>=0.25",
+    "openai>=1.0",
+]
+
+[project.optional-dependencies]
+dev = [
+    "pytest>=8.0",
+    "pytest-asyncio>=0.23",
+    "ruff>=0.4",
+    "mypy>=1.9",
+]
+
+[project.scripts]
+sol = "src.cli.main:app"
+
+[tool.ruff]
+line-length = 100
+target-version = "py312"
+
+[tool.ruff.lint]
+select = ["E", "F", "I", "UP", "B"]
+
+[tool.mypy]
+python_version = "3.12"
+strict = true

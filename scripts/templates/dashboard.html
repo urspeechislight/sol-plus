@@ -1,0 +1,713 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>sol-next · {{ title }}</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&family=JetBrains+Mono:wght@400;500;600;700&family=Scheherazade+New&display=swap" rel="stylesheet">
+<style>
+{% set c_bg       = "#0B0F14" %}
+{% set c_panel    = "#11161C" %}
+{% set c_surface  = "#151B23" %}
+{% set c_border   = "#1E2630" %}
+{% set c_border2  = "#161C24" %}
+{% set c_muted    = "#484F58" %}
+{% set c_dim      = "#8B949E" %}
+{% set c_text     = "#E6EDF3" %}
+{% set c_accent   = "#00E5FF" %}
+{% set c_warning  = "#FFB020" %}
+{% set c_critical = "#FF4D4D" %}
+{% set c_success  = "#2ECC71" %}
+
+{% set bcolors = {
+  "SECTION_HEADING":    "#00E5FF",
+  "HADITH_TRANSMISSION":"#4488FF",
+  "AUTHOR_COMMENTARY":  "#FFB020",
+  "BIOGRAPHY":          "#9944FF",
+  "FIQH_RULING":        "#2ECC71",
+  "QURAN_VERSE":        "#FF4D4D",
+  "NUMBERED_ENTRY":     "#8B949E",
+  "GENERAL_PROSE":      "#484F58",
+  "UNCLASSIFIED":       "#484F58"
+} %}
+
+{% set blabels = {
+  "SECTION_HEADING":    "Section Heading",
+  "HADITH_TRANSMISSION":"Hadith Transmission",
+  "AUTHOR_COMMENTARY":  "Author Commentary",
+  "BIOGRAPHY":          "Biography",
+  "FIQH_RULING":        "Fiqh Ruling",
+  "QURAN_VERSE":        "Quran Verse",
+  "NUMBERED_ENTRY":     "Numbered Entry",
+  "GENERAL_PROSE":      "General Prose",
+  "UNCLASSIFIED":       "Unclassified"
+} %}
+
+{% set ucolors = {
+  "ISNAD_UNIT":    "#4488FF",
+  "MATN_UNIT":     "#00E5FF",
+  "HADITH_UNIT":   "#2266BB",
+  "PROSE_UNIT":    "#484F58",
+  "HEADING_UNIT":  "#00E5FF",
+  "FOOTNOTE_UNIT": "#8B949E"
+} %}
+
+{% set ecolors = {
+  "NARRATOR_NAME":  "#5DCCFF",
+  "PERSON_TITLE":   "#FFB020",
+  "DEATH_MARKER":   "#FF4D4D",
+  "BIRTH_MARKER":   "#2ECC71"
+} %}
+
+{% set btooltips = {
+  "HADITH_TRANSMISSION": "Whole transmission unit (isnad + matn). Phase 3 will split into ISNAD_UNIT + MATN_UNIT.",
+  "SECTION_HEADING":     "Structural heading — kitab, bab, or fasl. Advances the hierarchy tracker.",
+  "AUTHOR_COMMENTARY":   "Author commentary or explanation (بيان / أقول).",
+  "BIOGRAPHY":           "Biographical entry: PERSON_REF + (DEATH_MARKER or GENEALOGY_CHAIN).",
+  "FIQH_RULING":         "Legal ruling (يجب, يحرم, واجب, حرام…).",
+  "QURAN_VERSE":         "Quranic quotation or verse reference.",
+  "GENERAL_PROSE":       "No specific pattern matched. Default fallback."
+} %}
+
+/* ── Reset (Causal Atlas) ── */
+*, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+html, body { height: 100%; width: 100%; }
+
+/* ── Scrollbar ── */
+::-webkit-scrollbar { width: 8px; height: 8px; }
+::-webkit-scrollbar-track { background: rgba(11,15,20,0.5); border-radius: 4px; }
+::-webkit-scrollbar-thumb { background: rgba(0,229,255,0.2); border-radius: 4px;
+                            border: 1px solid rgba(0,229,255,0.08); }
+::-webkit-scrollbar-thumb:hover { background: rgba(0,229,255,0.4); }
+* { scrollbar-width: thin; scrollbar-color: rgba(0,229,255,0.2) rgba(11,15,20,0.5); }
+
+body { font-family: 'Inter', system-ui, -apple-system, sans-serif;
+       background: {{ c_bg }}; color: {{ c_text }}; }
+
+/* ── Top bar ── */
+.topbar { background: {{ c_bg }}; border-bottom: 1px solid {{ c_border }};
+          padding: 0 20px; display: flex; align-items: center; gap: 10px;
+          position: fixed; top: 0; left: 0; right: 0; z-index: 100; height: 40px;
+          min-height: 40px; }
+.logo { font-size: 13px; font-weight: 300; color: {{ c_text }}; letter-spacing: 1px; }
+.logo em { font-style: normal; color: {{ c_accent }}; font-weight: 600; }
+.topbar-div { width: 1px; height: 14px; background: {{ c_border }}; margin: 0 4px; }
+.topbar-meta { display: flex; align-items: center; gap: 10px; }
+.topbar-meta .subtitle { font-size: 12px; color: {{ c_dim }};
+                         font-family: 'Inter', sans-serif; font-weight: 400; }
+.topbar-tag { font-size: 8px; padding: 1px 5px; border-radius: 3px;
+              background: rgba(0,229,255,0.08); border: 1px solid rgba(0,229,255,0.15);
+              color: {{ c_accent }}; font-weight: 600; letter-spacing: 0.3px;
+              font-family: 'JetBrains Mono', 'SF Mono', monospace; }
+.topbar-hash { display: flex; align-items: center; gap: 6px; margin-left: auto; }
+.topbar-hash .dot { width: 6px; height: 6px; border-radius: 50%;
+                    background: {{ c_success }}; }
+.topbar-hash code { font-family: 'JetBrains Mono', monospace;
+                    font-size: 11px; color: {{ c_dim }}; }
+
+/* View tabs (toolbar button style) */
+.view-tabs { display: flex; gap: 4px; }
+.view-tab { display: flex; align-items: center; gap: 5px; text-decoration: none;
+            padding: 3px 10px; border-radius: 4px; border: 1px solid {{ c_border }};
+            background: {{ c_bg }}; color: {{ c_dim }}; font-size: 9px; font-weight: 600;
+            letter-spacing: 0.3px; font-family: 'JetBrains Mono', 'SF Mono', monospace;
+            cursor: pointer; transition: background 0.15s, border-color 0.15s; }
+.view-tab:hover { background: rgba(0,229,255,0.06); border-color: rgba(0,229,255,0.2);
+                  color: {{ c_accent }}; }
+.view-tab.active { background: rgba(0,229,255,0.06); color: {{ c_accent }};
+                   border-color: rgba(0,229,255,0.2); }
+
+/* ── Shell ── */
+.shell { display: flex; margin-top: 40px; height: calc(100vh - 40px); }
+
+/* ── Sidebar ── */
+.sidebar { width: 260px; min-width: 260px; background: {{ c_panel }};
+           border-right: 1px solid {{ c_border }}; display: flex;
+           flex-direction: column; overflow: hidden; }
+.sidebar-header { padding: 12px 16px; border-bottom: 1px solid {{ c_border }};
+                  font-size: 11px; font-weight: 500; color: {{ c_dim }};
+                  text-transform: uppercase; letter-spacing: 0.6px;
+                  display: flex; justify-content: space-between; align-items: center; }
+.sidebar-count { font-size: 9px; color: {{ c_muted }};
+                 font-family: 'JetBrains Mono', monospace; font-weight: 500; }
+.sidebar-search-wrap { border-bottom: 1px solid {{ c_border }}; }
+.sidebar-search-wrap input { width: 100%; padding: 10px 14px; background: {{ c_bg }};
+                             border: none; border-bottom: 1px solid {{ c_border }};
+                             color: {{ c_text }}; font-size: 12px;
+                             font-family: 'Inter', sans-serif; outline: none; }
+.sidebar-search-wrap input::placeholder { color: {{ c_muted }}; }
+.sidebar-search-wrap input:focus { border-bottom-color: {{ c_accent }}; }
+
+.sidebar-list { flex: 1; overflow-y: auto; padding: 4px 0; }
+
+.genre-group { border-bottom: 1px solid {{ c_border2 }}; }
+.genre-header { display: flex; align-items: center; gap: 8px; padding: 10px 16px;
+                cursor: pointer; user-select: none; transition: background 0.1s; }
+.genre-header:hover { background: rgba(255,255,255,0.02); }
+.genre-arrow { font-size: 9px; color: {{ c_muted }}; transition: transform 0.15s;
+               width: 12px; text-align: center; }
+.genre-group.open .genre-arrow { transform: rotate(90deg); color: {{ c_accent }}; }
+.genre-name { font-size: 12px; font-weight: 500; color: {{ c_dim }}; }
+.genre-count { font-size: 9px; color: {{ c_muted }};
+               font-family: 'JetBrains Mono', monospace; margin-left: auto; }
+.genre-books { display: none; }
+.genre-group.open .genre-books { display: block; }
+
+.book-link { display: block; padding: 10px 16px 10px 36px; font-size: 12px;
+             font-weight: 500; color: {{ c_muted }}; text-decoration: none;
+             transition: background 0.1s; white-space: nowrap; overflow: hidden;
+             text-overflow: ellipsis; border-left: 2px solid transparent;
+             border-bottom: 1px solid {{ c_border2 }};
+             font-family: 'Inter', sans-serif; }
+.book-link:hover { background: rgba(255,255,255,0.02); color: {{ c_text }}; }
+.book-link.active { background: rgba(0,229,255,0.08); color: {{ c_accent }};
+                    border-left-color: {{ c_accent }}; }
+
+/* ── Main content ── */
+.main { flex: 1; overflow: auto; min-width: 0; }
+.main-inner { padding: 20px; }
+
+/* ── Book header ── */
+.book-header { margin-bottom: 16px; display: flex; align-items: baseline;
+               gap: 16px; flex-wrap: wrap; }
+.book-title { font-size: 20px; font-weight: 300; color: {{ c_text }};
+              font-family: "Scheherazade New", "Traditional Arabic", serif; }
+.book-author { font-size: 14px; color: {{ c_dim }};
+               font-family: "Scheherazade New", "Traditional Arabic", serif; }
+.book-ids { font-size: 11px; color: {{ c_muted }};
+            font-family: 'JetBrains Mono', monospace; }
+
+/* ── Pipeline stages bar ── */
+.pipeline-bar { display: flex; align-items: center; gap: 4px;
+                margin-bottom: 16px; flex-wrap: wrap; }
+.pipeline-stage { display: flex; align-items: center; justify-content: center;
+                  min-width: 48px; height: 28px; padding: 0 8px; border-radius: 4px;
+                  font-size: 11px; font-weight: 500;
+                  font-family: 'JetBrains Mono', monospace;
+                  background: {{ c_bg }}; color: {{ c_muted }};
+                  border: 1px solid {{ c_border }}; }
+.pipeline-stage.active { background: rgba(46,204,113,0.1); color: {{ c_success }};
+                         border-color: rgba(46,204,113,0.3); }
+.pipeline-stage.pending { background: rgba(255,176,32,0.1); color: {{ c_warning }};
+                          border-color: rgba(255,176,32,0.3); }
+.pipeline-arrow { color: {{ c_muted }}; font-size: 10px; }
+
+/* ── Metric cards (12-col grid) ── */
+.metric-grid { display: grid; grid-template-columns: repeat(4, 1fr);
+               gap: 12px; margin-bottom: 16px; }
+.metric-card { background: {{ c_panel }}; border: 1px solid {{ c_border }};
+               border-radius: 6px; padding: 16px 20px;
+               display: flex; flex-direction: column; gap: 4px; }
+.metric-label { font-size: 11px; font-weight: 500; color: {{ c_dim }};
+                text-transform: uppercase; letter-spacing: 0.6px; }
+.metric-value { font-family: 'JetBrains Mono', monospace; font-size: 28px;
+                font-weight: 500; color: {{ c_text }}; line-height: 1.1; }
+.metric-value.accent { color: {{ c_accent }}; }
+.metric-sub { font-size: 11px; color: {{ c_muted }};
+              font-family: 'JetBrains Mono', monospace; }
+
+/* ── Legend (score-badge style) ── */
+.legend { display: flex; flex-wrap: wrap; gap: 6px; margin-bottom: 16px; }
+.legend-item { display: inline-flex; align-items: center; gap: 6px;
+               padding: 2px 8px; border-radius: 3px; font-size: 11px;
+               font-weight: 600; font-family: 'JetBrains Mono', monospace; }
+.legend-dot { width: 6px; height: 6px; border-radius: 50%; flex-shrink: 0; }
+.legend-count { opacity: 0.7; }
+
+/* ── Panel ── */
+.panel { background: {{ c_panel }}; border: 1px solid {{ c_border }};
+         border-radius: 6px; overflow: visible; }
+.panel-header { padding: 12px 16px; font-size: 11px; font-weight: 500;
+                color: {{ c_dim }}; text-transform: uppercase; letter-spacing: 0.6px;
+                border-bottom: 1px solid {{ c_border }};
+                display: flex; justify-content: space-between; align-items: center; }
+.panel-body { padding: 16px; }
+
+/* ── Data table ── */
+.table-wrap { border: 1px solid {{ c_border }}; border-radius: 6px; overflow: hidden; }
+.table-wrap.overflow { overflow-x: auto; }
+table { width: 100%; border-collapse: collapse; font-size: 12px; }
+
+thead th { text-align: left; padding: 10px 14px; color: {{ c_dim }}; font-weight: 500;
+           font-size: 11px; text-transform: uppercase; letter-spacing: 0.4px;
+           border-bottom: 1px solid {{ c_border }}; cursor: default; user-select: none;
+           background: {{ c_panel }}; white-space: nowrap; }
+thead th:first-child { border-radius: 6px 0 0 0; }
+thead th:last-child  { border-radius: 0 6px 0 0; }
+
+tbody td { padding: 8px 14px; border-bottom: 1px solid {{ c_border2 }};
+           font-family: 'JetBrains Mono', monospace; font-size: 12px;
+           vertical-align: top; }
+tbody tr:last-child td { border-bottom: none; }
+tbody tr:hover td { background: rgba(255,255,255,0.015); }
+
+/* Column overrides */
+.col-num { color: {{ c_muted }}; white-space: nowrap; text-align: right;
+           width: 40px; padding-right: 8px !important; }
+.col-behavior { white-space: nowrap; }
+.col-page { color: {{ c_dim }}; text-align: center; white-space: nowrap; }
+.col-hierarchy { min-width: 140px; }
+.col-patterns { min-width: 120px; }
+.col-text { font-family: inherit; }
+
+/* Behavior badge (score-badge pattern) */
+.beh-badge { display: inline-flex; align-items: center; gap: 6px;
+             padding: 2px 8px; border-radius: 3px; font-size: 11px;
+             font-weight: 600; font-family: 'JetBrains Mono', monospace; }
+.beh-dot { width: 5px; height: 5px; border-radius: 50%; flex-shrink: 0; }
+
+/* Hierarchy crumbs */
+.hier-crumb { font-size: 13px; color: {{ c_dim }}; direction: rtl; text-align: right;
+              font-family: "Scheherazade New", "Traditional Arabic", serif;
+              line-height: 1.5; }
+.hier-empty { color: {{ c_muted }}; font-size: 11px; }
+
+/* Pattern tags */
+.ptag { display: inline-block; font-size: 9px;
+        font-family: 'JetBrains Mono', monospace; color: {{ c_dim }};
+        background: {{ c_surface }}; border: 1px solid {{ c_border }};
+        padding: 1px 6px; border-radius: 3px;
+        margin: 1px 2px 1px 0; white-space: nowrap; }
+.no-pattern { color: {{ c_muted }}; font-size: 11px; }
+
+/* Arabic text column */
+.text-ar { font-family: "Scheherazade New", "Traditional Arabic", serif;
+           font-size: 16px; line-height: 1.8; color: {{ c_text }};
+           direction: rtl; text-align: right; }
+.fn-marker { color: {{ c_accent }}; font-weight: 600; font-size: 0.65em;
+             vertical-align: super; line-height: 0; }
+/* Arabic honorific ligatures (ﷺ ﵇ ﵁ etc.) render oversized in Scheherazade — scale down */
+.hon { font-size: 0.82em; }
+
+/* ── Extraction chips (units + entities) ── */
+.extract-section { margin-top: 8px; padding-top: 8px;
+                   border-top: 1px solid rgba(0,229,255,0.08); }
+.extract-row { display: flex; align-items: flex-start; gap: 6px;
+               margin-bottom: 4px; flex-wrap: wrap; }
+.extract-label { font-size: 9px; font-weight: 600; text-transform: uppercase;
+                 letter-spacing: 0.4px; color: {{ c_muted }}; font-family: 'JetBrains Mono', monospace;
+                 white-space: nowrap; padding-top: 2px; min-width: 52px; }
+.unit-chip { display: inline-flex; flex-direction: column; gap: 2px;
+             padding: 3px 8px; border-radius: 3px; font-size: 10px; font-weight: 600;
+             font-family: 'JetBrains Mono', monospace; }
+.unit-chip-text { font-family: "Scheherazade New", "Traditional Arabic", serif;
+                  font-size: 12px; font-weight: 400; direction: rtl; text-align: right;
+                  line-height: 1.5; opacity: 0.85; max-height: 2.6em; overflow: hidden; }
+.entity-chip { display: inline-flex; align-items: center; gap: 4px;
+               padding: 2px 7px; border-radius: 3px; font-size: 9px; font-weight: 600;
+               font-family: 'JetBrains Mono', monospace; }
+.entity-chip-text { font-family: "Scheherazade New", serif; font-size: 12px;
+                    font-weight: 400; direction: rtl; }
+
+.span-footnote { margin-top: 8px; padding-top: 8px;
+                 border-top: 1px dashed {{ c_border }}; }
+.span-footnote-text { font-family: "Scheherazade New", "Traditional Arabic", serif;
+                      font-size: 11px; line-height: 1.5; color: {{ c_muted }};
+                      direction: rtl; text-align: right; white-space: pre-wrap; }
+
+/* ── Detail panel (reader page cards) ── */
+.reader-pages { display: flex; flex-direction: column; gap: 12px; }
+.reader-page { background: {{ c_panel }}; border: 1px solid {{ c_border }};
+               border-radius: 6px; padding: 16px; }
+.reader-page-header { display: flex; align-items: center; gap: 10px;
+                      padding-bottom: 10px; margin-bottom: 12px;
+                      border-bottom: 1px solid {{ c_border }}; }
+.reader-page-num { font-size: 11px; font-family: 'JetBrains Mono', monospace;
+                   color: {{ c_dim }}; background: {{ c_surface }};
+                   padding: 2px 8px; border-radius: 3px; }
+.reader-page-name { font-size: 11px; color: {{ c_dim }}; }
+.reader-page-badge { font-size: 9px; padding: 2px 8px; border-radius: 3px;
+                     margin-left: auto; font-weight: 600; text-transform: uppercase;
+                     letter-spacing: 0.3px; min-width: 48px; text-align: center;
+                     font-family: 'JetBrains Mono', monospace; }
+.reader-page-badge.content { background: rgba(46,204,113,0.1); color: {{ c_success }}; }
+.reader-page-badge.skipped { background: {{ c_surface }}; color: {{ c_muted }};
+                             border: 1px solid {{ c_border }}; }
+.reader-text { font-family: "Scheherazade New", "Traditional Arabic", serif;
+               font-size: 20px; line-height: 2.0; color: {{ c_text }};
+               direction: rtl; text-align: right; white-space: pre-wrap; }
+.reader-footnote { margin-top: 12px; padding-top: 10px;
+                   border-top: 1px dashed {{ c_border }}; }
+.reader-footnote-label { font-size: 10px; color: {{ c_muted }}; text-transform: uppercase;
+                         letter-spacing: 0.5px; margin-bottom: 6px; font-weight: 500; }
+.reader-footnote-text { font-family: "Scheherazade New", "Traditional Arabic", serif;
+                        font-size: 13px; line-height: 1.6; color: {{ c_dim }};
+                        direction: rtl; text-align: right; white-space: pre-wrap; }
+
+/* ── Footer bar ── */
+.footer-bar { padding: 12px 16px; background: {{ c_panel }};
+              border: 1px solid {{ c_border }}; border-radius: 6px;
+              margin-top: 16px; display: flex; align-items: center; gap: 12px;
+              flex-wrap: wrap; font-family: 'JetBrains Mono', monospace;
+              font-size: 11px; color: {{ c_muted }}; }
+.footer-bar code { color: {{ c_dim }}; background: {{ c_surface }}; padding: 1px 6px;
+                   border-radius: 3px; font-family: 'JetBrains Mono', monospace;
+                   font-size: 11px; }
+.footer-bar a { color: {{ c_accent }}; text-decoration: none; }
+.footer-bar a:hover { text-decoration: underline; }
+.footer-bar .spacer { flex: 1; }
+
+/* ── Progress bar ── */
+.progress-bar { height: 4px; background: {{ c_bg }}; border-radius: 2px;
+                overflow: hidden; margin-bottom: 8px; }
+.progress-fill { height: 100%; border-radius: 2px; transition: width 0.3s; }
+.progress-fill.accent { background: {{ c_accent }}; }
+.progress-fill.success { background: {{ c_success }}; }
+.progress-label { display: flex; justify-content: space-between; font-size: 11px;
+                  color: {{ c_dim }}; margin-bottom: 4px;
+                  font-family: 'JetBrains Mono', monospace; }
+
+/* ── Responsive ── */
+@media (max-width: 1279px) {
+  .metric-grid { grid-template-columns: repeat(3, 1fr); }
+}
+@media (max-width: 1024px) {
+  .shell { flex-direction: column; }
+  .sidebar { width: 100%; min-width: 100%; max-height: 200px;
+             border-right: none; border-bottom: 1px solid {{ c_border }}; }
+  .metric-grid { grid-template-columns: 1fr 1fr; }
+}
+</style>
+</head>
+<body>
+
+<div class="topbar">
+  <div class="logo">sol<em>-next</em></div>
+  <div class="topbar-div"></div>
+  <div class="topbar-meta">
+    <span class="subtitle">{{ title }} — {{ author }}</span>
+  </div>
+  <div class="topbar-div"></div>
+  <span class="topbar-tag">Phase 1–3</span>
+  <div class="topbar-hash">
+    <div class="dot"></div>
+    <code>{{ work_id[:12] if work_id|length > 12 else work_id }}</code>
+    <div class="topbar-div"></div>
+    <div class="view-tabs">
+      <a class="view-tab {{ 'active' if view == 'dashboard' }}" href="/?book={{ book_slug | urlencode }}">Pipeline</a>
+      <a class="view-tab {{ 'active' if view == 'reader' }}" href="/reader?book={{ book_slug | urlencode }}">Reader</a>
+    </div>
+  </div>
+</div>
+
+<div class="shell">
+
+  <!-- ── Sidebar ── -->
+  <div class="sidebar">
+    <div class="sidebar-header">
+      <span>Library</span>
+      <span class="sidebar-count">{{ total_books }} books</span>
+    </div>
+    <div class="sidebar-search-wrap">
+      <input type="text" id="book-search" placeholder="Search books...">
+    </div>
+    <div class="sidebar-list" id="book-tree">
+      {% for genre in books_tree %}
+      <div class="genre-group" data-genre="{{ genre.genre_id }}">
+        <div class="genre-header" onclick="toggleGenre(this)">
+          <span class="genre-arrow">&#9654;</span>
+          <span class="genre-name">{{ genre.genre }}</span>
+          <span class="genre-count">{{ genre.books | length }}</span>
+        </div>
+        <div class="genre-books">
+          {% for book in genre.books %}
+          <a class="book-link {{ 'active' if book.slug == book_slug }}"
+             href="/?book={{ book.slug | urlencode }}"
+             title="{{ book.filename }}">{{ book.display }}</a>
+          {% endfor %}
+        </div>
+      </div>
+      {% endfor %}
+    </div>
+  </div>
+
+  <!-- ── Main ── -->
+  <div class="main">
+    <div class="main-inner">
+
+  {% if view == 'reader' %}
+    {# ── Reader view ── #}
+    <div class="book-header">
+      <div class="book-title">{{ title }}</div>
+      <div class="book-author">— {{ author }}</div>
+      <div class="book-ids">{{ total_pages }} pages · {{ content_pages }} content</div>
+    </div>
+
+    <div class="reader-pages">
+      {% for page in pages %}
+      <div class="reader-page" id="page-{{ page.page_number }}">
+        <div class="reader-page-header">
+          <span class="reader-page-num">{{ page.page_number }}</span>
+          <span class="reader-page-name">{{ page.page_name }}</span>
+          {% if page.is_content %}
+          <span class="reader-page-badge content">content</span>
+          {% else %}
+          <span class="reader-page-badge skipped">skipped</span>
+          {% endif %}
+        </div>
+        <div class="reader-text">{{ page.text_html | safe }}</div>
+        {% if page.footnote_html %}
+        <div class="reader-footnote">
+          <div class="reader-footnote-label">Footnote</div>
+          <div class="reader-footnote-text">{{ page.footnote_html | safe }}</div>
+        </div>
+        {% endif %}
+      </div>
+      {% endfor %}
+    </div>
+
+    <div class="footer-bar">
+      <span>Showing first <code>{{ page_limit }}</code> pages</span>
+      <span>Source: <code>{{ book_path }}</code></span>
+      <span><a href="/?book={{ book_slug | urlencode }}">Pipeline view</a></span>
+      <span class="spacer"></span>
+      <span>EXTRACT · ENRICH · GRAPH</span>
+    </div>
+
+  {% else %}
+    {# ── Dashboard / Pipeline view ── #}
+    <div class="book-header">
+      <div class="book-title">{{ title }}</div>
+      <div class="book-author">— {{ author }}</div>
+      <div class="book-ids">{{ manifestation_id }}</div>
+    </div>
+
+    <!-- Pipeline stages -->
+    <div class="pipeline-bar">
+      <span class="pipeline-stage active">INGEST</span>
+      <span class="pipeline-arrow">&#9656;</span>
+      <span class="pipeline-stage active">SEGMENT</span>
+      <span class="pipeline-arrow">&#9656;</span>
+      <span class="pipeline-stage active">EXTRACT</span>
+      <span class="pipeline-arrow">&#9656;</span>
+      <span class="pipeline-stage pending">ENRICH</span>
+      <span class="pipeline-arrow">&#9656;</span>
+      <span class="pipeline-stage">GRAPH</span>
+    </div>
+
+    <!-- Metric cards -->
+    <div class="metric-grid">
+      <div class="metric-card">
+        <div class="metric-label">Pages ingested</div>
+        <div class="metric-value">{{ total_pages }}</div>
+        <div class="metric-sub">from source JSON</div>
+      </div>
+      <div class="metric-card">
+        <div class="metric-label">Content pages</div>
+        <div class="metric-value accent">{{ content_pages }}</div>
+        <div class="metric-sub">passed to segment</div>
+      </div>
+      <div class="metric-card">
+        <div class="metric-label">Skipped</div>
+        <div class="metric-value">{{ skipped_pages }}</div>
+        <div class="metric-sub">frontmatter</div>
+      </div>
+      <div class="metric-card">
+        <div class="metric-label">Spans detected</div>
+        <div class="metric-value accent">{{ total_spans }}</div>
+        <div class="metric-sub">structural segments</div>
+      </div>
+      <div class="metric-card">
+        <div class="metric-label">Behavior types</div>
+        <div class="metric-value">{{ behavior_count }}</div>
+        <div class="metric-sub">distinct labels</div>
+      </div>
+      <div class="metric-card">
+        <div class="metric-label">Units extracted</div>
+        <div class="metric-value accent">{{ total_units }}</div>
+        <div class="metric-sub">atomic content blocks</div>
+      </div>
+      <div class="metric-card">
+        <div class="metric-label">Entities found</div>
+        <div class="metric-value accent">{{ total_entities }}</div>
+        <div class="metric-sub">named entity mentions</div>
+      </div>
+    </div>
+
+    <!-- Progress bar -->
+    <div class="progress-label">
+      <span>Pipeline progress</span>
+      <span>3 / 5</span>
+    </div>
+    <div class="progress-bar">
+      <div class="progress-fill accent" style="width:60%"></div>
+    </div>
+
+    <!-- Behavior legend -->
+    <div class="legend">
+      {% for item in behavior_summary %}
+      {% set color = bcolors.get(item.behavior, "#484F58") %}
+      {% set label = blabels.get(item.behavior, item.behavior) %}
+      <div class="legend-item" style="background:{{ color }}18;color:{{ color }};">
+        <span class="legend-dot" style="background:{{ color }};"></span>
+        <span>{{ label }}</span>
+        <span class="legend-count">{{ item.count }}</span>
+      </div>
+      {% endfor %}
+    </div>
+
+    <!-- Unit type legend -->
+    {% if unit_type_summary %}
+    <div class="legend">
+      {% for item in unit_type_summary %}
+      {% set color = ucolors.get(item.unit_type, "#484F58") %}
+      <div class="legend-item" style="background:{{ color }}18;color:{{ color }};">
+        <span class="legend-dot" style="background:{{ color }};"></span>
+        <span>{{ item.unit_type }}</span>
+        <span class="legend-count">{{ item.count }}</span>
+      </div>
+      {% endfor %}
+      {% for item in entity_type_summary %}
+      {% set color = ecolors.get(item.entity_type, "#484F58") %}
+      <div class="legend-item" style="background:{{ color }}18;color:{{ color }};">
+        <span class="legend-dot" style="background:{{ color }};"></span>
+        <span>{{ item.entity_type }}</span>
+        <span class="legend-count">{{ item.count }}</span>
+      </div>
+      {% endfor %}
+    </div>
+    {% endif %}
+
+    <!-- Span table -->
+    <div class="table-wrap overflow">
+      <table>
+        <thead>
+          <tr>
+            <th>#</th>
+            <th>Behavior</th>
+            <th>Pg</th>
+            <th>Hierarchy</th>
+            <th>Patterns</th>
+            <th>Text</th>
+          </tr>
+        </thead>
+        <tbody>
+          {% for span in spans %}
+          {% set color = bcolors.get(span.behavior, "#484F58") %}
+          {% set label = blabels.get(span.behavior, span.behavior) %}
+          <tr>
+            <td class="col-num">{{ loop.index }}</td>
+
+            <td class="col-behavior">
+              <span class="beh-badge"
+                    style="background:{{ color }}18;color:{{ color }};"
+                    title="{{ btooltips.get(span.behavior, '') }}">
+                <span class="beh-dot" style="background:{{ color }};"></span>
+                {{ label }}
+              </span>
+            </td>
+
+            <td class="col-page">{{ span.page }}{% if span.page_end and span.page_end != span.page %}-{{ span.page_end }}{% endif %}</td>
+
+            <td class="col-hierarchy">
+              {% if span.hierarchy_path %}
+              <div class="hier-crumb">{{ span.hierarchy_path }}</div>
+              {% else %}
+              <span class="hier-empty">—</span>
+              {% endif %}
+            </td>
+
+            <td class="col-patterns">
+              {% if span.pattern_ids %}
+                {% for pid in span.pattern_ids %}
+                <span class="ptag">{{ pid }}</span>
+                {% endfor %}
+              {% else %}
+              <span class="no-pattern">—</span>
+              {% endif %}
+            </td>
+
+            <td class="col-text">
+              <div class="text-ar">{{ span.text_html | safe }}</div>
+              {% if span.footnote_html %}
+              <div class="span-footnote">
+                <div class="span-footnote-text">{{ span.footnote_html | safe }}</div>
+              </div>
+              {% endif %}
+              {% if span.units %}
+              <div class="extract-section">
+                <div class="extract-row">
+                  <span class="extract-label">units</span>
+                  {% for u in span.units %}
+                  {% set uc = ucolors.get(u.unit_type, "#484F58") %}
+                  <span class="unit-chip" style="background:{{ uc }}18;color:{{ uc }};">
+                    {{ u.unit_type }}
+                    {% if u.text_ar %}
+                    <span class="unit-chip-text">{{ u.text_ar }}</span>
+                    {% endif %}
+                  </span>
+                  {% endfor %}
+                </div>
+                {% if span.entities %}
+                <div class="extract-row">
+                  <span class="extract-label">entities</span>
+                  {% for e in span.entities %}
+                  {% set ec = ecolors.get(e.entity_type, "#484F58") %}
+                  <span class="entity-chip" style="background:{{ ec }}18;color:{{ ec }};">
+                    {{ e.entity_type }}
+                    <span class="entity-chip-text">{{ e.text }}</span>
+                  </span>
+                  {% endfor %}
+                </div>
+                {% endif %}
+              </div>
+              {% endif %}
+            </td>
+          </tr>
+          {% endfor %}
+        </tbody>
+      </table>
+    </div>
+
+    <div class="footer-bar">
+      <span>Pipeline: <code>ingest()</code> → <code>segment()</code> → <code>extract()</code></span>
+      <span>Source: <a href="/reader?book={{ book_slug | urlencode }}">{{ book_path }}</a></span>
+      <span><code>{{ page_limit }}</code> pages</span>
+      <span><a href="/api/data">/api/data</a></span>
+      <span class="spacer"></span>
+    </div>
+
+  {% endif %}
+
+    </div><!-- .main-inner -->
+  </div><!-- .main -->
+</div><!-- .shell -->
+
+<script>
+function toggleGenre(header) {
+  header.parentElement.classList.toggle('open');
+}
+
+document.addEventListener('DOMContentLoaded', function() {
+  var active = document.querySelector('.book-link.active');
+  if (active) {
+    var group = active.closest('.genre-group');
+    if (group) group.classList.add('open');
+    active.scrollIntoView({ block: 'center', behavior: 'instant' });
+  }
+});
+
+document.getElementById('book-search').addEventListener('input', function(e) {
+  var q = e.target.value.toLowerCase();
+  document.querySelectorAll('.genre-group').forEach(function(group) {
+    var books = group.querySelectorAll('.book-link');
+    var anyVisible = false;
+    books.forEach(function(link) {
+      var match = !q || link.textContent.toLowerCase().includes(q);
+      link.style.display = match ? '' : 'none';
+      if (match) anyVisible = true;
+    });
+    group.style.display = anyVisible ? '' : 'none';
+    if (q && anyVisible) group.classList.add('open');
+    if (!q) group.classList.remove('open');
+  });
+  if (!q) {
+    var active = document.querySelector('.book-link.active');
+    if (active) active.closest('.genre-group').classList.add('open');
+  }
+});
+</script>
+</body>
+</html>

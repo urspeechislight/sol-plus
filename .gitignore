@@ -1,0 +1,46 @@
+# Python
+__pycache__/
+*.py[cod]
+*.egg-info/
+dist/
+build/
+.eggs/
+*.egg
+
+# Virtual environments
+.venv/
+venv/
+
+# IDE
+.idea/
+.vscode/
+*.swp
+*.swo
+
+# OS
+.DS_Store
+Thumbs.db
+
+# Testing / caching
+.pytest_cache/
+.mypy_cache/
+.ruff_cache/
+htmlcov/
+.coverage
+
+# Rust build artifacts
+ruvector/target/
+
+# ruvector is a separate repo (github.com/ruvnet/ruvector)
+ruvector/
+
+# Large data files (books corpus)
+data/books/
+
+# Environment / secrets
+.env
+.env.*
+
+# Claude plans (session-specific)
+.claude/
+.planning/
